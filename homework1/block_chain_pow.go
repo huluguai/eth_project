@@ -1,4 +1,4 @@
-package main
+package homework1
 
 import (
 	"crypto/sha256"
@@ -191,7 +191,7 @@ func (bc *Blockchain) Mine(minerAddress string) *Block {
 	return block
 }
 
-func main() {
+func TestMain() {
 	// 演示：创建区块链、添加交易并挖矿
 	blockChain := NewBlockchain()
 	fmt.Println("挖矿中...")
