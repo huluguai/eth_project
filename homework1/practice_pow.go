@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+/**
+实践 POW， 编写程序（用go语言）用自己的昵称 xzx + nonce，不断修改nonce 进行 sha256 Hash 运算：
+	直到满足 4 个 0 开头的哈希值，打印出花费的时间、Hash 的内容及Hash值。
+	再次运算直到满足 5 个 0 开头的哈希值，打印出花费的时间、Hash 的内容及Hash值。
+**/
+
 // calulateHash 计算Sha256哈希值 / calulateHash computes the SHA256 hash of the input string and returns it as a hexadecimal string.
 // 该函数将输入字符串转换为字节数组，计算其 SHA256 哈希值，并将结果编码为十六进制字符串返回。
 func calulateHash(input string) string {
