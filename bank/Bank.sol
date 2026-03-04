@@ -13,7 +13,7 @@ contract Bank {
     // 映射：记录每个用户的存款余额
     mapping(address => uint256) public balances;
     
-    // 数组：存储存款金额前 3 名的用户地址
+    // 数组：存储存款金额前 3 名的用户地址（按存款金额降序排列）
     address[] public topDepositors;
     
     // ========== 事件定义 ==========
@@ -107,44 +107,70 @@ contract Bank {
 
     /**
      * @notice 内部函数：更新前 3 名存款用户
-     * @dev 维护一个最多包含 3 个地址的数组，按存款金额排序
+     * @dev 维护一个最多包含 3 个地址的数组，按存款金额降序排列
      */
     function updateTopDepositors() internal {
         address sender = msg.sender;
+        uint256 senderBalance = balances[sender];
         
-        // 如果该用户已在排行榜中，先移除
-        for (uint i = 0; i < topDepositors.length; i++) {
-            if (topDepositors[i] == sender) {
-                topDepositors[i] = address(0);
-                break;
-            }
+        // 步骤 1: 从排行榜中移除该用户（如果已存在）
+        removeUserFromTopDepositors(sender);
+        
+        // 步骤 2: 如果排行榜少于 3 人，直接添加
+        if (topDepositors.length < 3) {
+            topDepositors.push(sender);
+            sortTopDepositors();
+            return;
         }
         
-        // 将当前用户添加到排行榜末尾
-        topDepositors.push(sender);
-        
-        // 如果超过 3 人，移除存款最少的用户
-        if (topDepositors.length > 3) {
-            // 查找存款最少的用户索引
-            uint256 minIndex = 0;
-            uint256 minBalance = balances[topDepositors[0]];
-            
-            for (uint i = 1; i < topDepositors.length; i++) {
-                if (balances[topDepositors[i]] < minBalance) {
-                    minBalance = balances[topDepositors[i]];
-                    minIndex = i;
-                }
-            }
-            
-            // 用最后一个元素替换最少存款用户，然后弹出
-            topDepositors[minIndex] = topDepositors[topDepositors.length - 1];
-            topDepositors.pop();
+        // 步骤 3: 检查该用户是否能进入前 3
+        uint256 minBalance = balances[topDepositors[2]];
+        if (senderBalance > minBalance) {
+            // 替换最后一名
+            topDepositors[2] = sender;
+            sortTopDepositors();
         }
     }
 
     /**
+     * @notice 内部函数：从排行榜中移除指定用户
+     * @dev 遍历数组找到并删除指定地址
+     * @param user 要移除的用户地址
+     */
+    function removeUserFromTopDepositors(address user) internal {
+        for (uint i = 0; i < topDepositors.length; i++) {
+            if (topDepositors[i] == user) {
+                // 用最后一个元素替换被删除的元素
+                topDepositors[i] = topDepositors[topDepositors.length - 1];
+                topDepositors.pop();
+                break;
+            }
+        }
+    }
+
+    /**
+     * @notice 内部函数：对排行榜进行排序（冒泡排序）
+     * @dev 按存款金额降序排列前 3 名用户
+     */
+    function sortTopDepositors() internal {
+        for (uint i = 0; i < topDepositors.length; i++) {
+            for (uint j = i + 1; j < topDepositors.length; j++) {
+                if (balances[topDepositors[j]] > balances[topDepositors[i]]) {
+                    // 交换位置
+                    address temp = topDepositors[i];
+                    topDepositors[i] = topDepositors[j];
+                    topDepositors[j] = temp;
+                }
+            }
+        }
+        
+        // 触发更新事件
+        emit TopDepositorsUpdated(topDepositors);
+    }
+
+    /**
      * @notice 查询前 3 名存款用户
-     * @return 前 3 名用户地址数组（可能少于 3 个，如果存款用户不足 3 人）
+     * @return 前 3 名用户地址数组（按存款金额降序排列）
      */
     function getTopDepositors() public view returns (address[] memory) {
         return topDepositors;
