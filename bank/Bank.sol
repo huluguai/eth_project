@@ -75,7 +75,7 @@ contract Bank {
      *      支持通过 MetaMask 等钱包直接转账到合约地址
      */
     receive() external payable nonReentrant {
-        deposit();
+        _deposit();
     }
 
     /**
@@ -83,7 +83,7 @@ contract Bank {
      * @dev 当调用不存在的函数或合约收到 ETH 时调用
      */
     fallback() external payable nonReentrant {
-        deposit();
+        _deposit();
     }
 
     /**
@@ -91,7 +91,15 @@ contract Bank {
      * @dev 记录用户存款金额并更新前 3 名排行榜
      *      可通过 receive/fallback 自动调用，也可主动调用
      */
-    function deposit() public payable nonReentrant {
+    function deposit() public payable {
+        _deposit();
+    }
+
+    /**
+     * @notice 内部存款逻辑
+     * @dev 实际的存款处理逻辑，不加重入锁
+     */
+    function _deposit() internal {
         // 验证存款金额必须大于 0
         require(msg.value > 0, "deposit amount must be greater than 0");
         
