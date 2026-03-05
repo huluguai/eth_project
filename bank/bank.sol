@@ -2,14 +2,16 @@
 // 编译器版本声明，使用 Solidity 0.8.19 或更高版本（推荐使用最新稳定版）
 pragma solidity ^0.8.19;
 
+import "./ibank.sol";
+
 /**
  * @title Bank 合约
  * @dev 实现存款、提款和记录前 3 名存款用户的功能
  *      支持通过 MetaMask 等钱包直接存款，维护存款排行榜
  */
-contract Bank {
+contract Bank is IBank {
     // 合约管理员地址（部署者自动成为管理员）
-    address public owner;
+    address public override owner;
     
     // 映射：记录每个用户的存款余额
     mapping(address => uint256) public balances;
@@ -74,7 +76,7 @@ contract Bank {
      * @dev 当合约收到 ETH 且没有匹配函数时自动调用
      *      支持通过 MetaMask 等钱包直接转账到合约地址
      */
-    receive() external payable nonReentrant {
+    receive() external payable virtual nonReentrant {
         _deposit();
     }
 
@@ -82,7 +84,7 @@ contract Bank {
      * @notice 回退函数
      * @dev 当调用不存在的函数或合约收到 ETH 时调用
      */
-    fallback() external payable nonReentrant {
+    fallback() external payable virtual nonReentrant {
         _deposit();
     }
 
@@ -91,7 +93,7 @@ contract Bank {
      * @dev 记录用户存款金额并更新前 3 名排行榜
      *      可通过 receive/fallback 自动调用，也可主动调用
      */
-    function deposit() public payable {
+    function deposit() public payable virtual {
         _deposit();
     }
 
@@ -99,7 +101,7 @@ contract Bank {
      * @notice 内部存款逻辑
      * @dev 实际的存款处理逻辑，不加重入锁
      */
-    function _deposit() internal {
+    function _deposit() internal virtual {
         // 验证存款金额必须大于 0
         require(msg.value > 0, "deposit amount must be greater than 0");
         
@@ -118,7 +120,7 @@ contract Bank {
      * @dev 仅管理员可以调用，提取合约中的所有资金
      *      使用非重入修饰器防止重入攻击
      */
-    function withdraw() public onlyOwner nonReentrant {
+    function withdraw() public virtual override onlyOwner nonReentrant {
         // 获取合约当前余额
         uint256 balance = address(this).balance;
         
@@ -160,7 +162,7 @@ contract Bank {
      * @dev 仅当前管理员可以调用
      * @param newOwner 新管理员地址
      */
-    function transferOwnership(address newOwner) public onlyOwner {
+    function transferOwnership(address newOwner) public virtual override onlyOwner {
         // 验证新管理员地址有效
         require(newOwner != address(0), "new owner cannot be zero address");
         require(newOwner != owner, "new owner must be different from current owner");
@@ -274,7 +276,7 @@ contract Bank {
      * @notice 查询合约总余额
      * @return 合约当前的 ETH 余额（wei）
      */
-    function getContractBalance() public view returns (uint256) {
+    function getContractBalance() public view override returns (uint256) {
         return address(this).balance;
     }
 
