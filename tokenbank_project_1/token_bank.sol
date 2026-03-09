@@ -60,7 +60,7 @@ contract TokenBank {
      * @param amount 存入的代币数量（代币单位）
      * @return 是否成功
      */
-    function deposit(uint256 amount) external returns (bool) {
+    function deposit(uint256 amount) external virtual returns (bool) {
         // 检查存入数量必须大于 0
         require(amount > 0, "Deposit amount must be greater than 0");
         
