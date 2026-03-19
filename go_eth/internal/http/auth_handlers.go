@@ -20,6 +20,7 @@ type siweNonceResp struct {
 	Nonce string `json:"nonce"`
 }
 
+// SiweNonce 生成一次性 nonce，供客户端构造 SIWE message 后完成签名登录。
 func (h *Handlers) SiweNonce(c *gin.Context) {
 	nonce, err := NewNonce(16)
 	if err != nil {
@@ -49,6 +50,7 @@ type siweLoginResp struct {
 	Address string `json:"address"`
 }
 
+// SiweLogin 校验 SIWE message + 签名，并为已验证的钱包签发 JWT。
 func (h *Handlers) SiweLogin(c *gin.Context) {
 	var req siweLoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -106,10 +108,21 @@ func (h *Handlers) SiweLogin(c *gin.Context) {
 	}
 
 	now := time.Now()
-	// 原子地“标记已使用”：WHERE used_at IS NULL 防止并发请求复用同一 nonce（TOCTOU）。
-	if err := h.DB.Model(&models.SiweNonce{}).Where("nonce = ? AND used_at IS NULL", parsed.Nonce).
-		Updates(map[string]any{"address": strings.ToLower(parsed.Address), "used_at": &now}).Error; err != nil {
+	// 原子地“消费 nonce”：要求 nonce 未使用且未过期，并检查 RowsAffected，确保并发情况下只有一个请求能签发 JWT。
+	consume := h.DB.Model(&models.SiweNonce{}).
+		Where("nonce = ? AND used_at IS NULL AND expires_at > ?", parsed.Nonce, now).
+		Updates(map[string]any{"address": strings.ToLower(parsed.Address), "used_at": &now})
+	if consume.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to mark nonce used"})
+		return
+	}
+	if consume.RowsAffected != 1 {
+		// 可能原因：并发请求已先消费了 nonce，或在此处短时间内已过期。
+		if time.Now().After(nonce.ExpiresAt) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "nonce expired"})
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "nonce already used"})
+		}
 		return
 	}
 
@@ -133,6 +146,7 @@ func issueJWT(secret, address string, exp time.Time) (string, error) {
 	return tok.SignedString([]byte(secret))
 }
 
+// recoverAddressPersonalSign 使用 EIP-191（personal_sign）规则恢复签名对应的钱包地址。
 func recoverAddressPersonalSign(message, sigHex string) (string, error) {
 	sigHex = strings.TrimPrefix(sigHex, "0x")
 	sigBytes, err := hexutil.Decode("0x" + sigHex)

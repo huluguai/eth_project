@@ -7,7 +7,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// NewRouter 创建 Gin 路由，并注册所有 HTTP API（含 SIWE、JWT 鉴权与 transfers 查询）。
 func NewRouter(cfg config.Config, db *gorm.DB) *gin.Engine {
+	// 构建一个新的 Gin Engine，并注册所有 API 路由。
 	r := gin.New()
 	r.Use(gin.Recovery())
 

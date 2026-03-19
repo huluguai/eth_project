@@ -19,6 +19,7 @@ type SIWEMessage struct {
 	IssuedAt  time.Time
 }
 
+// ParseSIWEMessage 将 SIWE（EIP-4361）明文消息解析为结构化字段。
 func ParseSIWEMessage(msg string) (SIWEMessage, error) {
 	var out SIWEMessage
 	lines := splitLinesPreserveEmpty(msg)
@@ -105,6 +106,7 @@ func splitLinesPreserveEmpty(s string) []string {
 	return strings.Split(s, "\n")
 }
 
+// NewNonce 生成安全的随机 nonce（用于抵抗 SIWE 重放攻击）。
 func NewNonce(nBytes int) (string, error) {
 	if nBytes < 8 {
 		// nonce 太短会降低抗重放能力；这里做下限保护，同时允许调用方传更长的 nonce。

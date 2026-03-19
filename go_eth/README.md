@@ -28,11 +28,12 @@ curl http://127.0.0.1:8080/healthz
 - `HTTP_ADDR`：HTTP 监听地址（默认 `:8080`）
 - `ETH_RPC_URL`：以太坊 RPC（默认 `https://sepolia.drpc.org`）
 - `TOKEN_ADDRESS`：Token 合约地址（默认 `0x0b18F517d8e66b3bd6fB799d44A0ebee473Df20C`）
+- `TOKEN_ADDRESSES`：Token 合约地址列表（逗号分隔，形如 `0x..,0x..`）。`TOKEN_ADDRESSES` 优先，若为空则回退使用 `TOKEN_ADDRESS`。
 - `CHAIN_ID`：链 ID（默认 `11155111`）
 - `START_BLOCK`：可选；指定从哪个区块高度开始补历史。不填则从启动时最新区块（减去确认数）开始，只索引未来。
 - `CONFIRMATIONS`：确认数（默认 `6`）
 - `POLL_INTERVAL`：轮询间隔（默认 `8s`）
-- `DB_DSN`：SQLite DSN（默认 `file:go_eth.db?_busy_timeout=5000&_foreign_keys=1`）
+- `DB_DSN`：SQLite DSN（默认 `file:go_eth.db?_busy_timeout=5000&_foreign_keys=1&_journal_mode=WAL`）
 - `JWT_SECRET`：JWT 密钥（必填）
 - `ALLOWED_DOMAIN`：可选；限制 SIWE 的 `domain`
 
@@ -154,7 +155,7 @@ const token = loginResp.token;
 - `500`：DB 更新 nonce 已用状态失败 / JWT 签名失败
 
 ### 3) 查询登录地址转账记录
-`GET /api/transfers?limit=50&cursor=...`
+`GET /api/transfers?limit=50&cursor=...&tokenAddress=...`
 
 Header：
 - `Authorization: Bearer <jwt>`
@@ -162,6 +163,7 @@ Header：
 Query 参数：
 - `limit`：可选；返回条数，范围 **1-200**，默认 `50`
 - `cursor`：可选；分页游标（由接口返回的 `nextCursor` 透传即可；内容对前端应视为不透明）
+- `tokenAddress`：可选；筛选指定 token 合约地址的 Transfer（地址会被统一转为 lower-case）；不填则返回所有 token 的记录
 
 分页规则：
 - 排序为 **`blockNumber` 倒序**，同区块内按 **`logIndex` 倒序**

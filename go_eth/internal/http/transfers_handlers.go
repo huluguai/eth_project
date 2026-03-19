@@ -22,11 +22,13 @@ type transferDTO struct {
 	Amount       string `json:"amount"`
 }
 
+// transfersResp 返回分页后的 transfers 列表，以及可选的下一页游标。
 type transfersResp struct {
 	Items      []transferDTO `json:"items"`
 	NextCursor string        `json:"nextCursor,omitempty"`
 }
 
+// GetTransfers 查询当前鉴权钱包涉及的 ERC-20 Transfer，并按游标分页返回。
 func (h *Handlers) GetTransfers(c *gin.Context) {
 	addrAny, ok := c.Get(CtxAddressKey)
 	if !ok {
@@ -37,6 +39,7 @@ func (h *Handlers) GetTransfers(c *gin.Context) {
 
 	limit := parseLimit(c.Query("limit"), 50, 1, 200)
 	cursor := strings.TrimSpace(c.Query("cursor"))
+	tokenFilter := strings.ToLower(strings.TrimSpace(c.Query("tokenAddress")))
 
 	// 这里使用 (block_number DESC, log_index DESC) 作为稳定排序键：
 	// - 同一 block 内的日志顺序由 log_index 决定
@@ -45,6 +48,10 @@ func (h *Handlers) GetTransfers(c *gin.Context) {
 		Where("(from_address = ? OR to_address = ?)", address, address).
 		Order("block_number DESC").Order("log_index DESC").
 		Limit(limit)
+
+	if tokenFilter != "" {
+		q = q.Where("token_address = ?", tokenFilter)
+	}
 
 	if cursor != "" {
 		// 游标分页：cursor 编码的是上一页最后一条的 (block_number, log_index)。
@@ -102,12 +109,14 @@ func parseLimit(s string, def, min, max int) int {
 	return v
 }
 
+// encodeCursor 将 (blockNumber, logIndex) 编码为 URL 安全的游标字符串。
 func encodeCursor(block uint64, logIndex uint) string {
 	// base64-url 编码便于在 URL query 里安全传递；RawURLEncoding 不带 padding，更短也更常见。
 	raw := fmt.Sprintf("%d:%d", block, logIndex)
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))
 }
 
+// decodeCursor 解析游标字符串，恢复 (blockNumber, logIndex) 二元组。
 func decodeCursor(cur string) (uint64, uint, error) {
 	b, err := base64.RawURLEncoding.DecodeString(cur)
 	if err != nil {

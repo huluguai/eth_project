@@ -19,6 +19,7 @@ import (
 )
 
 func main() {
+	// main：加载配置 -> 初始化数据库/以太坊客户端 -> 启动索引器与 HTTP 服务 -> 优雅退出。
 	// Load .env if present (local dev convenience).
 	_ = godotenv.Load()
 
@@ -42,7 +43,7 @@ func main() {
 	defer stop()
 
 	indexer := ethidx.NewIndexer(ethc, gdb, ethidx.IndexerConfig{
-		TokenAddress:  cfg.TokenAddress,
+		TokenAddresses: cfg.TokenAddresses,
 		StartBlock:    cfg.StartBlock,
 		Confirmations: cfg.Confirmations,
 		PollInterval:  cfg.PollInterval,
